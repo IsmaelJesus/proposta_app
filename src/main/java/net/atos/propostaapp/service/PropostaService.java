@@ -6,19 +6,33 @@ import net.atos.propostaapp.dto.PropostaResponseDto;
 import net.atos.propostaapp.entity.Proposta;
 import net.atos.propostaapp.mapper.PropostaMapper;
 import net.atos.propostaapp.repository.PropostaRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
-@AllArgsConstructor
 public class PropostaService {
     private PropostaRepository propostaRepository;
+    private NotificacaoService notificacaoService;
+    private String exchange;
+
+    public PropostaService(PropostaRepository propostaRepository,
+                           NotificacaoService notificacaoService,
+                           @Value("${rabbitmq.propostapendente.exchange}") String exchange) {
+        this.propostaRepository = propostaRepository;
+        this.notificacaoService = notificacaoService;
+        this.exchange = exchange;
+    }
+
     public PropostaResponseDto criar(PropostaRequestDto requestDto){
         Proposta proposta = PropostaMapper.INSTANCE.convertDtoToProposta(requestDto);
         propostaRepository.save(proposta);
 
-        return PropostaMapper.INSTANCE.convertEntityToDto(proposta);
+        PropostaResponseDto response = PropostaMapper.INSTANCE.convertEntityToDto(proposta);
+        notificacaoService.notificar(response, exchange);
+
+        return response;
     }
 
     public List<PropostaResponseDto> obterProposta() {
