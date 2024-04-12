@@ -2,8 +2,10 @@ package net.atos.propostaapp;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
+@EnableScheduling
 public class PropostaAppApplication {
 
 	public static void main(String[] args) {

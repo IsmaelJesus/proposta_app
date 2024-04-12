@@ -1,6 +1,5 @@
 package net.atos.propostaapp.service;
 
-import lombok.AllArgsConstructor;
 import net.atos.propostaapp.dto.PropostaRequestDto;
 import net.atos.propostaapp.dto.PropostaResponseDto;
 import net.atos.propostaapp.entity.Proposta;
@@ -14,14 +13,14 @@ import java.util.List;
 @Service
 public class PropostaService {
     private PropostaRepository propostaRepository;
-    private NotificacaoService notificacaoService;
+    private NotificacaoRabbitService notificacaoRabbitService;
     private String exchange;
 
     public PropostaService(PropostaRepository propostaRepository,
-                           NotificacaoService notificacaoService,
+                           NotificacaoRabbitService notificacaoRabbitService,
                            @Value("${rabbitmq.propostapendente.exchange}") String exchange) {
         this.propostaRepository = propostaRepository;
-        this.notificacaoService = notificacaoService;
+        this.notificacaoRabbitService = notificacaoRabbitService;
         this.exchange = exchange;
     }
 
@@ -29,10 +28,19 @@ public class PropostaService {
         Proposta proposta = PropostaMapper.INSTANCE.convertDtoToProposta(requestDto);
         propostaRepository.save(proposta);
 
-        PropostaResponseDto response = PropostaMapper.INSTANCE.convertEntityToDto(proposta);
-        notificacaoService.notificar(response, exchange);
+        notificarRabbitMQ(proposta);
+        notificacaoRabbitService.notificar(proposta, exchange);
 
-        return response;
+        return PropostaMapper.INSTANCE.convertEntityToDto(proposta);
+    }
+
+    public void notificarRabbitMQ(Proposta proposta){
+        try {
+            notificacaoRabbitService.notificar(proposta, exchange);
+        }catch(RuntimeException e){
+            proposta.setIntegrada(false);
+            propostaRepository.save(proposta);
+        }
     }
 
     public List<PropostaResponseDto> obterProposta() {
